@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Saved Reels Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+    }
+
+    header {
+      padding: 12px;
+      background: #111;
+      text-align: center;
+    }
+
+    input {
+      color: white;
+    }
+
+    #reels {
+  height: calc(100vh - 50px);
+  overflow: hidden;
+
+  width: 100%;
+  max-width: 500px;
+
+  margin: 0 auto;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+    .reel {
+      width: 100%;
+      max-width: 500px;
+      padding: 12px;
+      box-sizing: border-box;
+    }
+
+    .reel-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .reel-date {
+      font-size: 12px;
+      color: #aaa;
+      margin-bottom: 8px;
+    }
+
+    .open-btn {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: #3897f0;
+      color: white;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .instagram-media {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>Instagram Saved Reels</div>
+    <input type="file" id="jsonFileInput" accept=".json" />
+  </header>
+
+  <div id="reels"></div>
+
+  <script>
+    const input = document.getElementById("jsonFileInput");
+    const container = document.getElementById("reels");
+
+    let reels = [];
+    let index = 0;
+
+    // Load JSON file
+    input.addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = evt => {
+        const json = JSON.parse(evt.target.result);
+
+        if (!json.saved_saved_media) {
+          alert("Invalid Instagram JSON");
+          return;
+        }
+
+        reels = json.saved_saved_media;
+        index = 0;
+        render();
+      };
+      reader.readAsText(file);
+    });
+
+    function render() {
+      container.innerHTML = "";
+
+      renderReel(index);
+      if (index + 1 < reels.length) renderReel(index + 1);
+
+      loadInstagram();
+    }
+
+    function renderReel(i) {
+      const r = reels[i];
+      if (!r) return;
+
+      const el = document.createElement("div");
+      el.className = "reel";
+
+      const title = document.createElement("div");
+      title.className = "reel-title";
+      title.textContent = r.title;
+
+      const date = document.createElement("div");
+      date.className = "reel-date";
+      date.textContent =
+        "Saved on: " +
+        new Date(r.string_map_data["Saved on"].timestamp * 1000).toLocaleString();
+
+      const block = document.createElement("blockquote");
+      block.className = "instagram-media";
+      block.setAttribute(
+        "data-instgrm-permalink",
+        r.string_map_data["Saved on"].href
+      );
+      block.setAttribute("data-instgrm-version", "14");
+
+      const a = document.createElement("a");
+      a.href = r.string_map_data["Saved on"].href;
+      block.appendChild(a);
+
+      const open = document.createElement("a");
+      open.href = r.string_map_data["Saved on"].href;
+      open.target = "_blank";
+      open.className = "open-btn";
+      open.textContent = "Open on Instagram";
+
+      el.append(title, date, block, open);
+      container.appendChild(el);
+    }
+
+    function loadInstagram() {
+      if (!window.instgrm) {
+        const s = document.createElement("script");
+        s.src = "https://www.instagram.com/embed.js";
+        s.async = true;
+        document.body.appendChild(s);
+      } else {
+        window.instgrm.Embeds.process();
+      }
+    }
+
+    // Swipe handling
+    let startX = 0;
+
+    document.addEventListener("touchstart", e => {
+      startX = e.touches[0].clientX;
+    });
+
+    document.addEventListener("touchend", e => {
+      const endX = e.changedTouches[0].clientX;
+      const delta = endX - startX;
+
+      if (Math.abs(delta) < 50) return;
+
+      if (delta < 0 && index < reels.length - 1) {
+        index++;
+        render();
+      }
+
+      if (delta > 0 && index > 0) {
+        index--;
+        render();
+      }
+    });
+  </script>
+
+</body>
+</html>
