@@ -18,30 +18,32 @@
       padding: 12px;
       background: #111;
       text-align: center;
+      z-index: 2;
+      position: relative;
     }
 
     input {
       color: white;
     }
 
+    /* === LAYOUT === */
+    #app {
+      height: calc(100vh - 50px);
+      display: grid;
+      grid-template-columns: minmax(60px, 1fr) auto minmax(60px, 1fr);
+      align-items: center;
+    }
+
     #reels {
-  height: calc(100vh - 50px);
-  overflow: hidden;
-
-  width: 100%;
-  max-width: 500px;
-
-  margin: 0 auto;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
+      display: flex;
+      justify-content: center;
+      pointer-events: none;
+    }
 
     .reel {
-      width: 100%;
-      max-width: 500px;
-      padding: 12px;
+      pointer-events: auto;
+      width: min(520px, 92vw);
+      padding: 14px;
       box-sizing: border-box;
     }
 
@@ -66,10 +68,34 @@
       text-decoration: none;
       font-size: 14px;
     }
-    .instagram-media {
-  margin-left: auto !important;
-  margin-right: auto !important;
-}
+
+    /* === NAV ZONES === */
+    .nav-zone {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .arrow {
+      font-size: 44px;
+      opacity: 0.4;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+    }
+
+    .nav-zone:hover .arrow {
+      opacity: 0.9;
+    }
+
+    .nav-zone.swipe-left .arrow {
+      transform: translateX(-14px);
+    }
+
+    .nav-zone.swipe-right .arrow {
+      transform: translateX(14px);
+    }
   </style>
 </head>
 <body>
@@ -79,16 +105,27 @@
     <input type="file" id="jsonFileInput" accept=".json" />
   </header>
 
-  <div id="reels"></div>
+  <div id="app">
+    <div class="nav-zone" id="leftZone">
+      <div class="arrow">‹</div>
+    </div>
+
+    <div id="reels"></div>
+
+    <div class="nav-zone" id="rightZone">
+      <div class="arrow">›</div>
+    </div>
+  </div>
 
   <script>
     const input = document.getElementById("jsonFileInput");
     const container = document.getElementById("reels");
+    const leftZone = document.getElementById("leftZone");
+    const rightZone = document.getElementById("rightZone");
 
     let reels = [];
     let index = 0;
 
-    // Load JSON file
     input.addEventListener("change", e => {
       const file = e.target.files[0];
       if (!file) return;
@@ -96,12 +133,10 @@
       const reader = new FileReader();
       reader.onload = evt => {
         const json = JSON.parse(evt.target.result);
-
         if (!json.saved_saved_media) {
           alert("Invalid Instagram JSON");
           return;
         }
-
         reels = json.saved_saved_media;
         index = 0;
         render();
@@ -111,10 +146,7 @@
 
     function render() {
       container.innerHTML = "";
-
       renderReel(index);
-      if (index + 1 < reels.length) renderReel(index + 1);
-
       loadInstagram();
     }
 
@@ -137,10 +169,7 @@
 
       const block = document.createElement("blockquote");
       block.className = "instagram-media";
-      block.setAttribute(
-        "data-instgrm-permalink",
-        r.string_map_data["Saved on"].href
-      );
+      block.setAttribute("data-instgrm-permalink", r.string_map_data["Saved on"].href);
       block.setAttribute("data-instgrm-version", "14");
 
       const a = document.createElement("a");
@@ -168,28 +197,33 @@
       }
     }
 
-    // Swipe handling
+    /* === SWIPE + ARROW FEEDBACK === */
     let startX = 0;
 
-    document.addEventListener("touchstart", e => {
-      startX = e.touches[0].clientX;
+    document.addEventListener("pointerdown", e => {
+      startX = e.clientX;
     });
 
-    document.addEventListener("touchend", e => {
-      const endX = e.changedTouches[0].clientX;
-      const delta = endX - startX;
-
+    document.addEventListener("pointerup", e => {
+      const delta = e.clientX - startX;
       if (Math.abs(delta) < 50) return;
 
       if (delta < 0 && index < reels.length - 1) {
-        index++;
+        index = Math.floor(Math.random() * reels.length);
+        leftZone.classList.add("swipe-right");
         render();
       }
 
       if (delta > 0 && index > 0) {
         index--;
+        rightZone.classList.add("swipe-left");
         render();
       }
+
+      setTimeout(() => {
+        rightZone.classList.remove("swipe-left");
+        leftZone.classList.remove("swipe-right");
+      }, 200);
     });
   </script>
 
