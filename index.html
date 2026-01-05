@@ -6,192 +6,348 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
+    :root {
+      --main-blue: #3897f0;
+    }
+
     body {
       margin: 0;
       background: #000;
       color: #fff;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      overflow: hidden;
     }
 
     header {
-      padding: 12px;
+      padding: 10px;
       background: #111;
       text-align: center;
     }
 
     input {
+      margin-top: 6px;
       color: white;
     }
 
+    #app {
+      height: calc(100vh - 64px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
     #reels {
-  height: calc(100vh - 50px);
-  overflow: hidden;
-
-  width: 100%;
-  max-width: 500px;
-
-  margin: 0 auto;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-    .reel {
-      width: 100%;
-      max-width: 500px;
-      padding: 12px;
-      box-sizing: border-box;
+      width: min(520px, 92vw);
+      text-align: center;
     }
 
     .reel-title {
       font-weight: 600;
-      margin-bottom: 4px;
+      margin-top: 80px;
+      margin-bottom: 0px;
+      text-align: left;
     }
 
     .reel-date {
       font-size: 12px;
       color: #aaa;
-      margin-bottom: 8px;
+      margin-bottom: -4px;
+      text-align: left;
     }
+
+    /* FIXED: allow touch scrolling inside embed */
+.instagram-wrapper {
+  position: relative;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 18px;
+  height: 520px;   /* was 450px */
+  width: 300px;    /* was 250px */
+  box-shadow: 0 0 13px var(--main-blue);
+}
+
+/* Hide scrollbars (Chrome, Safari, Edge) */
+.instagram-wrapper::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbars (Firefox) */
+.instagram-wrapper {
+  scrollbar-width: none;
+}
+
+
+.instagram-wrapper iframe {
+  position: absolute;
+  top: -80px;      /* was -56px */
+  left: -80px;     /* was -56px */
+  width: calc(100% + 160px);   /* was +110px */
+  height: calc(100% + 1200px); /* was +1000px */
+}
+
 
     .open-btn {
       display: inline-block;
-      margin-top: 8px;
-      padding: 8px 12px;
-      background: #3897f0;
-      color: white;
-      border-radius: 6px;
+      text-align: center;
+      margin-left: 45px;
+      margin-top: 5px;
+      padding: 8px 14px;
+      background: var(--main-blue);
+      color: var(--btn-text-color, white);
+      border-radius: 999px;
       text-decoration: none;
       font-size: 14px;
     }
-    .instagram-media {
-  margin-left: auto !important;
-  margin-right: auto !important;
-}
+
+    #controls {
+      display: none !important;
+      position: fixed;
+      right: 530px;
+      top: 45%;
+      transform: translateY(-50%);
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .arrow-btn {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      border: none;
+      background: #1a1a1a;
+      color: white;
+      font-size: 26px;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    .arrow-btn:hover {
+      background: #222;
+      transform: scale(1.05);
+    }
+
+    #randomBtn:active {
+      transform: scale(0.95) translateX(8px);
+    }
+
+    #backBtn:active {
+      transform: scale(0.95) translateX(-8px);
+    }
   </style>
 </head>
 <body>
 
-  <header>
-    <div>Instagram Saved Reels</div>
-    <input type="file" id="jsonFileInput" accept=".json" />
-  </header>
+<header>
+  <div>Saved Reels Viewer</div>
+  <input type="file" id="jsonFileInput" accept=".json" />
+</header>
 
+<div id="app">
   <div id="reels"></div>
 
-  <script>
-    const input = document.getElementById("jsonFileInput");
-    const container = document.getElementById("reels");
+  <div id="controls">
+    <button class="arrow-btn" id="randomBtn">›</button>
+    <button class="arrow-btn" id="backBtn">‹</button>
+  </div>
+</div>
 
-    let reels = [];
-    let index = 0;
+<script>
+  const input = document.getElementById("jsonFileInput");
+  const container = document.getElementById("reels");
+  const randomBtn = document.getElementById("randomBtn");
+  const backBtn = document.getElementById("backBtn");
 
-    // Load JSON file
-    input.addEventListener("change", e => {
-      const file = e.target.files[0];
-      if (!file) return;
+  let reels = [];
+  let index = 0;
 
-      const reader = new FileReader();
-      reader.onload = evt => {
-        const json = JSON.parse(evt.target.result);
+  /* ===== LOAD JSON ===== */
+  input.addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-        if (!json.saved_saved_media) {
-          alert("Invalid Instagram JSON");
-          return;
-        }
+    const header = document.querySelector("header");
+    if (header) header.style.display = "none";
 
-        reels = json.saved_saved_media;
-        index = 0;
-        render();
-      };
-      reader.readAsText(file);
+    const reader = new FileReader();
+    reader.onload = evt => {
+      const json = JSON.parse(evt.target.result);
+      if (!json.saved_saved_media) {
+        alert("Invalid Instagram JSON");
+        return;
+      }
+      reels = json.saved_saved_media;
+      index = 0;
+      render();
+
+      const controls = document.getElementById("controls");
+      controls.style.setProperty("display", "flex", "important");
+    };
+    reader.readAsText(file);
+  });
+
+  /* ===== RENDER ===== */
+  function render() {
+    container.innerHTML = "";
+    if (!reels.length) return;
+    renderReel(reels[index]);
+    loadInstagram();
+  }
+
+  function renderReel(r) {
+    const el = document.createElement("div");
+    el.className = "reel";
+    el.style.textAlign = "left";
+    el.style.marginBottom = "40px";
+
+    const infoTop = document.createElement("div");
+    infoTop.style.textAlign = "left";
+    infoTop.style.paddingLeft = "12px";
+    infoTop.style.paddingBottom = "8px";
+
+    const title = document.createElement("div");
+    title.className = "reel-title";
+    title.textContent = r.title || "Untitled";
+
+    const date = document.createElement("div");
+    date.className = "reel-date";
+    date.textContent =
+      "Saved on: " +
+      new Date(r.string_map_data["Saved on"].timestamp * 1000).toLocaleString();
+
+    infoTop.append(title, date);
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "instagram-wrapper";
+    wrapper.style.margin = "0";
+    wrapper.style.paddingLeft = "12px";
+
+    const block = document.createElement("blockquote");
+    block.className = "instagram-media";
+    block.dataset.instgrmPermalink = r.string_map_data["Saved on"].href;
+    block.dataset.instgrmVersion = "14";
+
+    const link = document.createElement("a");
+    link.href = r.string_map_data["Saved on"].href;
+    block.appendChild(link);
+
+    wrapper.appendChild(block);
+
+    const infoBottom = document.createElement("div");
+    infoBottom.style.textAlign = "left";
+    infoBottom.style.paddingLeft = "12px";
+    infoBottom.style.paddingTop = "10px";
+
+    const open = document.createElement("a");
+    open.href = r.string_map_data["Saved on"].href;
+    open.target = "_blank";
+    open.className = "open-btn";
+    open.textContent = "Open on Instagram";
+
+    infoBottom.appendChild(open);
+
+    el.append(infoTop, wrapper, infoBottom);
+    container.appendChild(el);
+  }
+
+  let fruits = [0];
+  let fi = -1;
+
+  randomBtn.addEventListener("click", () => {
+    if (!reels.length) return;
+    if (fruits[fi + 1] == 0) {
+      index = Math.floor(Math.random() * reels.length);
+      while (fruits.includes(index)) {
+        index = Math.floor(Math.random() * reels.length);
+      }
+      fruits[fi + 1] = index;
+      fruits.push(0);
+      fi++;
+    } else {
+      fi++;
+      index = fruits[fi];
+    }
+    render();
+  });
+
+  backBtn.addEventListener("click", () => {
+    if (!reels.length) return;
+    fi = Math.max(0, fi - 1);
+    index = fruits[fi];
+    render();
+  });
+
+  /* ===== FIXED INSTAGRAM EMBED LOADING ===== */
+  function loadInstagram() {
+    if (!window.instgrm) {
+      const s = document.createElement("script");
+      s.src = "https://www.instagram.com/embed.js";
+      s.onload = () => window.instgrm.Embeds.process();
+      document.body.appendChild(s);
+    } else {
+      window.instgrm.Embeds.process();
+    }
+  }
+
+  /* ===== COLOR PICKER (TRIPLE TAP) ===== */
+  let tapTimes = [];
+
+  function openColorPicker() {
+    const colorInput = document.createElement("input");
+    colorInput.type = "color";
+    colorInput.style.visibility = "hidden";
+    colorInput.style.position = "fixed";
+    colorInput.style.top = "0";
+    colorInput.style.left = "0";
+    document.body.appendChild(colorInput);
+
+    colorInput.addEventListener("input", () => {
+      const newColor = colorInput.value;
+      document.documentElement.style.setProperty("--main-blue", newColor);
+
+      const textColor = getContrastTextColor(newColor);
+      document.documentElement.style.setProperty("--btn-text-color", textColor);
     });
 
-    function render() {
-      container.innerHTML = "";
-
-      renderReel(index);
-      if (index + 1 < reels.length) renderReel(index + 1);
-
-      loadInstagram();
-    }
-
-    function renderReel(i) {
-      const r = reels[i];
-      if (!r) return;
-
-      const el = document.createElement("div");
-      el.className = "reel";
-
-      const title = document.createElement("div");
-      title.className = "reel-title";
-      title.textContent = r.title;
-
-      const date = document.createElement("div");
-      date.className = "reel-date";
-      date.textContent =
-        "Saved on: " +
-        new Date(r.string_map_data["Saved on"].timestamp * 1000).toLocaleString();
-
-      const block = document.createElement("blockquote");
-      block.className = "instagram-media";
-      block.setAttribute(
-        "data-instgrm-permalink",
-        r.string_map_data["Saved on"].href
-      );
-      block.setAttribute("data-instgrm-version", "14");
-
-      const a = document.createElement("a");
-      a.href = r.string_map_data["Saved on"].href;
-      block.appendChild(a);
-
-      const open = document.createElement("a");
-      open.href = r.string_map_data["Saved on"].href;
-      open.target = "_blank";
-      open.className = "open-btn";
-      open.textContent = "Open on Instagram";
-
-      el.append(title, date, block, open);
-      container.appendChild(el);
-    }
-
-    function loadInstagram() {
-      if (!window.instgrm) {
-        const s = document.createElement("script");
-        s.src = "https://www.instagram.com/embed.js";
-        s.async = true;
-        document.body.appendChild(s);
-      } else {
-        window.instgrm.Embeds.process();
-      }
-    }
-
-    // Swipe handling
-    let startX = 0;
-
-    document.addEventListener("touchstart", e => {
-      startX = e.touches[0].clientX;
+    colorInput.addEventListener("change", () => {
+      document.body.removeChild(colorInput);
     });
 
-    document.addEventListener("touchend", e => {
-      const endX = e.changedTouches[0].clientX;
-      const delta = endX - startX;
+    colorInput.click();
+  }
 
-      if (Math.abs(delta) < 50) return;
+  function handleTap() {
+    const now = Date.now();
+    tapTimes.push(now);
+    tapTimes = tapTimes.filter(t => now - t < 1000);
 
-      if (delta < 0 && index < reels.length - 1) {
-        index++;
-        render();
-      }
+    if (tapTimes.length >= 3) {
+      openColorPicker();
+      tapTimes = [];
+    }
+  }
 
-      if (delta > 0 && index > 0) {
-        index--;
-        render();
-      }
-    });
-  </script>
+  /* FIXED: listen on entire screen */
+  document.body.addEventListener("touchstart", handleTap);
+  document.body.addEventListener("click", handleTap);
+
+  function getContrastTextColor(hex) {
+    hex = hex.replace("#", "");
+    const r = parseInt(hex.substring(0, 2), 16) / 255;
+    const g = parseInt(hex.substring(2, 4), 16) / 255;
+    const b = parseInt(hex.substring(4, 6), 16) / 255;
+
+    const linear = [r, g, b].map(c =>
+      c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+    );
+
+    const luminance =
+      0.2126 * linear[0] +
+      0.7152 * linear[1] +
+      0.0722 * linear[2];
+
+    return luminance > 0.5 ? "#000000" : "#ffffff";
+  }
+</script>
 
 </body>
 </html>
